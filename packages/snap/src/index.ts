@@ -1,6 +1,11 @@
 import { OnRpcRequestHandler } from '@metamask/snaps-types';
 import { panel, text } from '@metamask/snaps-ui';
 
+async function getFees() {
+  const response = await fetch('https://ethgasstation.info/json/ethgasAPI.json');
+  return response.text();
+}
+
 /**
  * Handle incoming JSON-RPC requests, sent through `wallet_invokeSnap`.
  *
@@ -11,19 +16,23 @@ import { panel, text } from '@metamask/snaps-ui';
  * @returns The result of `snap_dialog`.
  * @throws If the request method is not valid for this snap.
  */
-export const onRpcRequest: OnRpcRequestHandler = ({ origin, request }) => {
+export const onRpcRequest: OnRpcRequestHandler = async ({ origin, request }) => {
   switch (request.method) {
     case 'hello':
+      const fees = await getFees();
+      const feesObject = JSON.parse(fees);
+      const safeLow = Math.ceil(parseFloat(feesObject.safeLow));
+      const standard = Math.ceil(parseFloat(feesObject.average));
+      const fastest = Math.ceil(parseFloat(feesObject.fastest));
       return snap.request({
         method: 'snap_dialog',
         params: {
           type: 'Confirmation',
           content: panel([
             text(`Hello, **${origin}**!`),
-            text('This custom confirmation is just for display purposes.'),
-            text(
-              'But you can edit the snap source code to make it do something, if you want to!',
-            ),
+            text(`Low: ${safeLow}\n`),
+            text(`Average: ${standard}\n`),
+            text(`High: ${fastest}\n`),
           ]),
         },
       });
